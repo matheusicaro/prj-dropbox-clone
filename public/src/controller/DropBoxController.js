@@ -10,6 +10,7 @@ class DropBoxController {
         
         this.initEvents();
     }
+
     initEvents(){
 
         // QUANDO O BOTÃO RECEBER UM CLICK, A TAG INPUT DEVER APLICAR O EVENTO CLICK.
@@ -18,9 +19,42 @@ class DropBoxController {
         })
 
         this.btnOpenInputFile.addEventListener('change', event =>{
-
-            console.log(event.target.files);
+            this.sendUploadFile(event.target.files);
             this.snackModalEl.style.display = 'block';
         })
+    }
+
+    sendUploadFile(files){
+
+        let promises = [];
+        // [...files] = files é uma coleção, logo estamos criando 
+        // um array do tamanho da coleção que pode ser imensa
+        [...files].forEach( file =>{
+            // criando uma promise para efetuar o post de cada arquivo
+            promises.push(new Promise((resolve, reject) =>{
+                
+                let ajax = new XMLHttpRequest();
+                ajax.open('POST', '/upload');
+
+                ajax.onload = event => {
+                    try{
+                        resolve(JSON.parse(ajax.responseText));
+                    }catch (e){
+                        reject(e);
+                    }
+                }
+
+                ajax.onerror = event =>{
+                    reject(event);
+                }
+
+                let formData = new FormData();
+                // passando o arquivo no formData, ('nome do campo no post', arquivo)
+                formData.append('input-file', file);
+                ajax.send(formData);
+            }));
+        });
+        // retorne um array de promessas a serem execultadas, promise.all gerencia todas elas.
+        return Promise.all(promises);
     }
 }
