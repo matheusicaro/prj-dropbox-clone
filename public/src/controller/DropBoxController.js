@@ -3,25 +3,33 @@ class DropBoxController {
     constructor(){
         
         // ID DA TAG DO BOTÃO ENVIAR
-        this.btnSendFile = document.querySelector('#btn-send-file');
+        this.btnSendFileEl = document.querySelector('#btn-send-file');
         // ID DA TAG DO INPUT QUE ESTÃO VINCULADA AO CLICK DO BOTÃO
-        this.btnOpenInputFile = document.querySelector('#files');
+        this.btnOpenInputFileEl = document.querySelector('#files');
         this.snackModalEl = document.querySelector('#react-snackbar-root');
-        
+        this.progressBarEl = this.snackModalEl.querySelector('.mc-progress-bar-fg');
+        this.nameFileEl = this.snackModalEl.querySelector('.filename');
+        this.timeLeftEl = this.snackModalEl.querySelector('.timeleft');
         this.initEvents();
     }
 
     initEvents(){
 
         // QUANDO O BOTÃO RECEBER UM CLICK, A TAG INPUT DEVER APLICAR O EVENTO CLICK.
-        this.btnSendFile.addEventListener('click', event =>{
-            this.btnOpenInputFile.click();
+        this.btnSendFileEl.addEventListener('click', event =>{
+            this.btnOpenInputFileEl.click();
+
         })
 
-        this.btnOpenInputFile.addEventListener('change', event =>{
+        this.btnOpenInputFileEl.addEventListener('change', event =>{
             this.sendUploadFile(event.target.files);
-            this.snackModalEl.style.display = 'block';
+            this.modalShow();
+            this.inputFilesEl.value = '';
         })
+    }
+
+    modalShow(show = true){
+        this.snackModalEl.style.display = (show) ? 'block' : 'none';
     }
 
     sendUploadFile(files){
@@ -37,6 +45,9 @@ class DropBoxController {
                 ajax.open('POST', '/upload');
 
                 ajax.onload = event => {
+
+                    this.modalShow(false);
+
                     try{
                         resolve(JSON.parse(ajax.responseText));
                     }catch (e){
@@ -45,16 +56,61 @@ class DropBoxController {
                 }
 
                 ajax.onerror = event =>{
+                    
+                    this.modalShow(false);
                     reject(event);
+                }
+                
+                ajax.upload.onprogress = event =>{
+                    this.updateProgressUpload(event, file);
                 }
 
                 let formData = new FormData();
                 // passando o arquivo no formData, ('nome do campo no post', arquivo)
                 formData.append('input-file', file);
+
+                this.startUploadTime = Date.now();
+
                 ajax.send(formData);
             }));
         });
         // retorne um array de promessas a serem execultadas, promise.all gerencia todas elas.
         return Promise.all(promises);
+    }
+
+    updateProgressUpload(event, file){
+
+        let timeSpent = Date.now() - this.startUploadTime;
+
+        let loaded = event.loaded;
+        let total = event.total;
+        let porcent = parseInt((loaded / total) * 100);
+        this.progressBarEl.style.width = `${porcent}%`;
+
+        let timeLeft = ((100 - porcent) * timeSpent)/porcent;
+
+        this.nameFileEl.innerHTML = file.name;
+        this.timeleftEl.innerHTML = '';
+
+        console.log(timeSpent, porcent);
+    }
+
+    formatTimeToHuman(duration){
+       
+        let seconds = parseInt( (duration / 1000) % 60);
+        let minutes = parseInt( (duration / (1000 * 60)) % 60);
+        let hours = parseInt( (duration / (1000 * 60 * 60)) % 24);
+
+        if(hours > 0){
+            return `${hours} horas, ${minutes} minutes e ${seconds} segundos`;
+        }
+        
+        if(minutes > 0){
+            return `${minutes} minutes e ${seconds} segundos`;
+        }
+
+        if(seconds > 0){
+            return ` ${seconds} segundos`;
+        }
     }
 }
