@@ -11,7 +11,7 @@ class DropBoxController {
         this.nameFileEl = this.snackModalEl.querySelector('.filename');
         this.timeLeftEl = this.snackModalEl.querySelector('.timeleft');
 
-        // this.fileIcons = new Icons();
+        this.icons = new Icons();
         this.initEvents();
     }
 
@@ -97,12 +97,6 @@ class DropBoxController {
 
     formatEstimatedTimeToUpload(duration){
         
-        let file = new Object();
-        file.type = 'tes';
-        let a = new Icons();
-        a.getFileIcons(file);
-        // this.fileIcons.getFileIcons(file);
-
         let seconds = parseInt( (duration / 1000) % 60);
         let minutes = parseInt( (duration / (1000 * 60)) % 60);
         let hours = parseInt( (duration / (1000 * 60 * 60)) % 24);
@@ -122,7 +116,7 @@ class DropBoxController {
     // TODO: ************************************************* ACESSAR INSTANCIA DOS ICONES
     insertIconToUploadFile(){
         return `
-            ${ this.fileIcons.getFileIcons(file)}
+            ${ this.icons.getFileIcons(file)}
             <div class="name text-center">${file.name}</div>
         `
     }

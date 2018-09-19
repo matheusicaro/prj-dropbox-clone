@@ -1,7 +1,6 @@
 class Icons {
 
     constructor(){
-
     }
 
     getFileIcons(file){
