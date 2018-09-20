@@ -10,11 +10,12 @@ class DropBoxController {
         this.progressBarEl = this.snackModalEl.querySelector('.mc-progress-bar-fg');
         this.nameFileEl = this.snackModalEl.querySelector('.filename');
         this.timeLeftEl = this.snackModalEl.querySelector('.timeleft');
+        this.listFilesEl = document.querySelector('#list-of-files-and-directories')
         this.icons = new Icons();
 
         this.connectFirebase();
-
         this.initEvents();
+        this.readFilesDatabase();
     }
 
     connectFirebase(){
@@ -31,8 +32,24 @@ class DropBoxController {
     }
 
     // buscar referencia da coleção no banco, referencia para cruds na collection.
-    getFirebaseRef(){
+    getDatabaseReference(){
         return firebase.database().ref('files');
+    }
+
+    readFilesDatabase(){
+        
+        // on('value', snapshot()) - metodo que fica aguardando um evento no DB
+        // e o snapshot é uma fotografia do DB quando ocorrer um evento, o retorno de on(). 
+        this.getDatabaseReference().on('value', collectionInDB =>{
+            
+            this.listFilesEl.innerHTML = ''; // clear previous data
+            
+            collectionInDB.forEach(document =>{
+                let key = document.key;
+                let data = document.val();
+                this.listFilesEl.appendChild(this.insertIconToFile(data, key))
+            })
+        })
     }
 
 
@@ -45,18 +62,27 @@ class DropBoxController {
         })
 
         this.btnOpenInputFileEl.addEventListener('change', event =>{
+
+            this.btnSendFileEl.disabled = true;
+
             this.sendUploadFile(event.target.files).then(responses =>{
-
                 responses.forEach(response =>{
-                    this.getFirebaseRef().push().set(response.files['input-file']);
+                    this.getDatabaseReference().push().set(response.files['input-file']);
                 })
-                this.modalShow(false);
+                this.uploadComplete();
 
-
-            });
-
+            }).catch(err =>{
+                this.uploadComplete();
+                console.log("error: ", err)
+            })
             this.modalShow();
         })
+    }
+
+    uploadComplete(){
+        this.modalShow(false);
+        this.btnOpenInputFileEl.value = '';
+        this.btnSendFileEl.disabled = false;
     }
 
     modalShow(show = true){
@@ -140,10 +166,16 @@ class DropBoxController {
     }
 
     // TODO: ************************************************* ACESSAR INSTANCIA DOS ICONES
-    insertIconToUploadFile(){
-        return `
-            ${ this.icons.getFileIcons(file)}
-            <div class="name text-center">${file.name}</div>
-        `
+    insertIconToFile(file, key){
+        
+    // montar <li> para inserir busca de icones em getFileIcon() 
+        let li = document.createElement('li');
+        // HTMLElement.dataset 
+        li.dataset.key = key;
+        li.innerHTML = `
+                        ${ this.icons.getFileIcon(file)}
+                        <div class="name text-center">${file.name}</div>
+                    `
+        return li;
     }
 }
