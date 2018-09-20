@@ -12,7 +12,7 @@ class DropBoxController {
         this.timeLeftEl = this.snackModalEl.querySelector('.timeleft');
         this.icons = new Icons();
 
-        this.database = this.connectFirebase();
+        this.connectFirebase();
 
         this.initEvents();
     }
@@ -30,6 +30,11 @@ class DropBoxController {
         firebase.initializeApp(config);
     }
 
+    // buscar referencia da coleção no banco, referencia para cruds na collection.
+    getFirebaseRef(){
+        return firebase.database().ref('files');
+    }
+
 
     initEvents(){
 
@@ -40,7 +45,16 @@ class DropBoxController {
         })
 
         this.btnOpenInputFileEl.addEventListener('change', event =>{
-            this.sendUploadFile(event.target.files);
+            this.sendUploadFile(event.target.files).then(responses =>{
+
+                responses.forEach(response =>{
+                    this.getFirebaseRef().push().set(response.files['input-file']);
+                })
+                this.modalShow(false);
+
+
+            });
+
             this.modalShow();
         })
     }
@@ -63,8 +77,6 @@ class DropBoxController {
 
                 ajax.onload = event => {
 
-                    this.modalShow(false);
-
                     try{
                         resolve(JSON.parse(ajax.responseText));
                     }catch (e){
@@ -73,8 +85,6 @@ class DropBoxController {
                 }
 
                 ajax.onerror = event =>{
-                    
-                    this.modalShow(false);
                     reject(event);
                 }
                 
