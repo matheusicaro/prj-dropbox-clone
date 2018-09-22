@@ -11,7 +11,7 @@ class DropBoxController {
         this.nameFileEl = this.snackModalEl.querySelector('.filename');
         this.timeLeftEl = this.snackModalEl.querySelector('.timeleft');
         this.listFilesEl = document.querySelector('#list-of-files-and-directories')
-        this.icons = new Icons();
+        this.iconsType = new Icons();
 
         this.connectFirebase();
         this.initEvents();
@@ -168,14 +168,75 @@ class DropBoxController {
     // TODO: ************************************************* ACESSAR INSTANCIA DOS ICONES
     insertIconToFile(file, key){
         
-    // montar <li> para inserir busca de icones em getFileIcon() 
-        let li = document.createElement('li');
+    // montar <iconInTagLi> para inserir busca de icones em getFileIcon() 
+        let iconInTagLi = document.createElement('li');
         // HTMLElement.dataset 
-        li.dataset.key = key;
-        li.innerHTML = `
-                        ${ this.icons.getFileIcon(file)}
+        iconInTagLi.dataset.key = key;
+        iconInTagLi.innerHTML = `
+                        ${ this.iconsType.getFileIconByExtension(file)}
                         <div class="name text-center">${file.name}</div>
                     `
-        return li;
+        // adicionar evento antes de retornar o (iconInTagLi - icone do arquivo).
+        this.initEventForFileSelection(iconInTagLi);
+        
+        return iconInTagLi;
     }
+
+    // "currentFileSelected" == TAG html <li>, que representa icone do arquivo na view.
+    initEventForFileSelection(currentFileSelected){
+
+        currentFileSelected.addEventListener('click', event =>{
+
+            // se o shift estiver selecionado, entre
+            if(event.shiftKey){
+                // pegue o primeiro arquivo selecionado pelo shift
+                let fileSelectedWithShift = this.listFilesEl.querySelector('.selected');
+                
+                if(fileSelectedWithShift){
+                    let indexStart;
+                    let indexEnd;
+                    
+                    // selecione a TAG-lu pai que contem uma lista de arquivos, e pegue o index do proximo arquivo selecionado
+                    let listFiles = currentFileSelected.parentElement.childNodes;
+                   
+                    // pegue o index do segundo arquivo selecionado
+                    listFiles.forEach((file, index) =>{
+                        if(fileSelectedWithShift === file) indexStart = index;
+                        if(currentFileSelected === file) indexEnd = index;
+                    });
+
+                    let limitForSelectionFiles = [indexStart, indexEnd].sort();
+                    
+                    // dentre o intervalo da lista de arquivos, aplique o efeito de seleção para todos entre o intervalo definido, limitForSelectionFiles
+                    listFiles.forEach((element, index) =>{
+                        if( index >= limitForSelectionFiles[0] && index <= limitForSelectionFiles[1] )
+                            this.addCssClassToElement(element, 'selected');
+                    })
+
+                    return true;
+                }
+
+            }
+
+            // se o ctrl não estiver selecionado, remova o efeito css do ultimo arquivo selecionado.
+            if( !event.ctrlKey ){
+                // remova a classe CSS que dar o efeito de seleção no arquivo.
+                this.listFilesEl.querySelectorAll('li.selected').forEach(element =>{
+                    this.removeCssClassToElement(element, 'selected');
+                })
+            }
+
+            // aplicando efeito de seleção via classe CSS quando ocorrer um click no arquivo 
+            this.addCssClassToElement(currentFileSelected, 'selected');
+        })
+    }
+
+    addCssClassToElement(element, cssClass){
+        return element.classList.add(cssClass);
+    }
+
+    removeCssClassToElement(element, cssClass){
+        return element.classList.remove(cssClass);
+    }
+    
 }
