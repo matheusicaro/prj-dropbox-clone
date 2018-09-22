@@ -4,14 +4,20 @@ class DropBoxController {
         
         // ID DA TAG DO BOTÃO ENVIAR
         this.btnSendFileEl = document.querySelector('#btn-send-file');
-        // ID DA TAG DO INPUT QUE ESTÃO VINCULADA AO CLICK DO BOTÃO
         this.btnOpenInputFileEl = document.querySelector('#files');
+        this.btnDeleteEl = document.querySelector('#btn-delete');
+        this.btnRenameEl = document.querySelector('#btn-rename');
+        this.btnNewFolderEl = document.querySelector('#btn-new-folder');
+
         this.snackModalEl = document.querySelector('#react-snackbar-root');
         this.progressBarEl = this.snackModalEl.querySelector('.mc-progress-bar-fg');
         this.nameFileEl = this.snackModalEl.querySelector('.filename');
         this.timeLeftEl = this.snackModalEl.querySelector('.timeleft');
         this.listFilesEl = document.querySelector('#list-of-files-and-directories')
+        
         this.iconsType = new Icons();
+
+        this.onSelectionChange = new Event('selectionChange');
 
         this.connectFirebase();
         this.initEvents();
@@ -52,8 +58,32 @@ class DropBoxController {
         })
     }
 
-
     initEvents(){
+
+        this.listFilesEl.addEventListener('selectionChange', e =>{
+            
+            // para a quantidade de arquivos selecionados, esconda ou mostre opções na view
+            switch(this.getSelectedFiles().length){
+
+                // esconde os botões caso não tenha nenhum arquivo selecionado
+                case 0:
+                    this.btnDeleteEl.style.display = 'none';
+                    this.btnRenameEl.style.display = 'none';
+                break;
+                
+                // mostre os botões caso tenha um arquivo selecionado
+                case 1:
+                    this.btnDeleteEl.style.display = 'block';
+                    this.btnRenameEl.style.display = 'block';
+                break;
+                
+                // para varios arquivos selecionados, esconda ou demonstre os botões
+                default:
+                    this.btnDeleteEl.style.display = 'block';
+                    this.btnRenameEl.style.display = 'none';
+
+            }
+        })
 
         // QUANDO O BOTÃO RECEBER UM CLICK, A TAG INPUT DEVER APLICAR O EVENTO CLICK.
         this.btnSendFileEl.addEventListener('click', event =>{
@@ -77,6 +107,10 @@ class DropBoxController {
             })
             this.modalShow();
         })
+    }
+
+    getSelectedFiles(){
+        return this.listFilesEl.querySelectorAll('.selected')
     }
 
     uploadComplete(){
@@ -212,7 +246,9 @@ class DropBoxController {
                         if( index >= limitForSelectionFiles[0] && index <= limitForSelectionFiles[1] )
                             this.addCssClassToElement(element, 'selected');
                     })
-
+                    
+                    // dispara um evento quando selecionar um arquivo
+                    this.listFilesEl.dispatchEvent(this.onSelectionChange);
                     return true;
                 }
 
@@ -225,9 +261,12 @@ class DropBoxController {
                     this.removeCssClassToElement(element, 'selected');
                 })
             }
-
+            
             // aplicando efeito de seleção via classe CSS quando ocorrer um click no arquivo 
             this.addCssClassToElement(currentFileSelected, 'selected');
+
+            // dispara um evento quando selecionar um arquivo
+            this.listFilesEl.dispatchEvent(this.onSelectionChange);
         })
     }
 
