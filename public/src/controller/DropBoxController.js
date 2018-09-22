@@ -60,6 +60,24 @@ class DropBoxController {
 
     initEvents(){
 
+        // evento quando clicar no botão 'rename'
+        this.btnRenameEl.addEventListener('click', event =>{
+
+            let firstFileSelected = this.getSelectedFiles()[0];
+            let file = JSON.parse(firstFileSelected.dataset.file);
+
+            // abra um pop-up para renomear o arquivo
+            let newName = prompt("Renomear o arquivo", file.name)
+
+            if(newName){
+                file.name = newName;
+                let key = firstFileSelected.dataset.key;
+                // no banco, procure um filho(child) da referencia do banco, e substitua o arquivo.
+                console.log(file)
+                this.getDatabaseReference().child(key).set(file);
+            }
+        })
+
         this.listFilesEl.addEventListener('selectionChange', e =>{
             
             // para a quantidade de arquivos selecionados, esconda ou mostre opções na view
@@ -206,6 +224,8 @@ class DropBoxController {
         let iconInTagLi = document.createElement('li');
         // HTMLElement.dataset 
         iconInTagLi.dataset.key = key;
+        iconInTagLi.dataset.file = JSON.stringify(file);
+
         iconInTagLi.innerHTML = `
                         ${ this.iconsType.getFileIconByExtension(file)}
                         <div class="name text-center">${file.name}</div>
