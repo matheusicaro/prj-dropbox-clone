@@ -91,6 +91,7 @@ class DropBoxController {
             this.deleteFileDataBase().then(responses => {
                 
                 responses.forEach( response =>{
+                    console.log(response)
                     let fileKey = response.fields.key;
                     if(fileKey){
                         this.getDatabaseReference().child(fileKey).remove();
@@ -329,7 +330,7 @@ class DropBoxController {
                 break;
 
                 default:
-                    window.open('/file?path' + file.path); // abra o arquivo
+                    window.open('/file?path=' + file.path); // abra o arquivo
                 break;
             }
         })
