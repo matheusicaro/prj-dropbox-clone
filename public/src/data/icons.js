@@ -3,7 +3,7 @@ class Icons {
     constructor(){
     }
 
-    getFileIcons(file){
+    getFileIconByExtension(file){
 
         switch(file.type){
 
