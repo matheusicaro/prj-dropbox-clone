@@ -23,7 +23,7 @@ class DropBoxController {
 
         this.connectFirebase();
         this.initEvents();
-        this.readFilesDatabase();
+        this.openFolder()
     }
 
     connectFirebase(){
@@ -40,11 +40,17 @@ class DropBoxController {
     }
 
     // buscar referencia da coleção no banco, referencia para cruds na collection.
-    getDatabaseReference(){
-        return firebase.database().ref('files');
+    getDatabaseReference(path){
+        // se path não é uma nova pasta, retorne a referencia da pasta atual.
+        if( !path ) path = this.currentFolder.join('/')
+
+        return firebase.database().ref(path);
     }
 
     readFilesDatabase(){
+        
+        // a ultima pasta é a pasta atual antes antes de acessar a proxima pasta
+        this.lastFolder = this.currentFolder.join('/');
         
         // on('value', snapshot()) - metodo que fica aguardando um evento no DB
         // e o snapshot é uma fotografia do DB quando ocorrer um evento, o retorno de on(). 
@@ -55,7 +61,9 @@ class DropBoxController {
             collectionInDB.forEach(document =>{
                 let key = document.key;
                 let data = document.val();
-                this.listFilesEl.appendChild(this.insertIconToFile(data, key))
+                // Se o cumento tem existe um type, extensao, renderiza na tela.
+                if(data.type)
+                    this.listFilesEl.appendChild(this.insertIconToFile(data, key))
             })
         })
     }
@@ -308,6 +316,24 @@ class DropBoxController {
     // "currentFileSelected" == TAG html <li>, que representa icone do arquivo na view.
     initEventForFileSelection(currentFileSelected){
 
+        // add event para quando ocorrer um double click no arquivo
+        currentFileSelected.addEventListener('dblclick', event =>{
+
+            let file = JSON.parse(currentFileSelected.dataset.file);
+            switch(file.type){
+
+                case 'folder':
+                    this.currentFolder.push(file.name); // empura uma referencia da pasta atual para o vetor de pastas.
+                    this.openFolder();
+                break;
+
+                default:
+                    window.open('/file?path' + file.path); // abra o arquivo
+                break;
+            }
+        })
+
+        // add event para quando ocorrer um click no arquivo
         currentFileSelected.addEventListener('click', event =>{
 
             // se o shift estiver selecionado, entre
@@ -340,7 +366,6 @@ class DropBoxController {
                     this.listFilesEl.dispatchEvent(this.onSelectionChange);
                     return true;
                 }
-
             }
 
             // se o ctrl não estiver selecionado, remova o efeito css do ultimo arquivo selecionado.
@@ -358,6 +383,15 @@ class DropBoxController {
             this.listFilesEl.dispatchEvent(this.onSelectionChange);
         })
     }
+
+    openFolder(){
+        //Se existe existe uma pasta anterior, pegue a referencia da ultima pasta e apague o evento que fica escultando a ultima pasta
+        if(this.lastFolder) this.getDatabaseReference(this.lastFolder).off('value');
+
+        this.readFilesDatabase();
+    }
+
+
 
     addCssClassToElement(element, cssClass){
         return element.classList.add(cssClass);
