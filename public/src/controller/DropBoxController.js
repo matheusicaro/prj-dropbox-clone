@@ -19,6 +19,8 @@ class DropBoxController {
 
         this.onSelectionChange = new Event('selectionChange');
 
+        this.currentFolder = ['DropBox']
+
         this.connectFirebase();
         this.initEvents();
         this.readFilesDatabase();
@@ -59,6 +61,20 @@ class DropBoxController {
     }
 
     initEvents(){
+
+        // event quando para o botão criar pasta
+        this.btnNewFolderEl.addEventListener('click', element =>{
+            // recebe o nome da pasta e cria sua referencia no Firebase
+            let folderName = prompt('Nome da nova pasta:');
+            if(folderName){
+                this.getDatabaseReference().push().set({
+                    name: folderName, 
+                    type: 'folder',
+                    path: this.currentFolder.join('/')
+                })
+            }
+        })
+
 
         // event para quando for clicado em deletar arquivos
         this.btnDeleteEl.addEventListener('click', e =>{
