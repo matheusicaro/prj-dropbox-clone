@@ -19,7 +19,8 @@ class DropBoxController {
 
         this.onSelectionChange = new Event('selectionChange');
 
-        this.currentFolder = ['DropBox']
+        this.currentFolder = ['Meu DropBox']
+        this.linkFolderPath = document.querySelector('#browse-location');
 
         this.connectFirebase();
         this.initEvents();
@@ -387,11 +388,58 @@ class DropBoxController {
     openFolder(){
         //Se existe existe uma pasta anterior, pegue a referencia da ultima pasta e apague o evento que fica escultando a ultima pasta
         if(this.lastFolder) this.getDatabaseReference(this.lastFolder).off('value');
-
+        
+        this.renderFolderLink();
         this.readFilesDatabase();
     }
 
+    renderFolderLink(){
 
+        let navFilePath = document.createElement('nav');
+        let path = [];
+
+        for(let index=0; index < this.currentFolder.length; index++){
+
+            let folderName = this.currentFolder[index];
+            path.push(folderName);
+
+            let span = document.createElement('span');
+            let lastFolder = index + 1;
+
+            if( lastFolder === this.currentFolder.length )
+                span.innerHTML = folderName;
+
+            else{
+                span.className = 'breadcrumb-segment__wrapper';
+                span.innerHTML = `
+                    <span class="ue-effect-container uee-BreadCrumbSegment-link-0">
+                        <a href="#" data-path="${path.join('/')}"  class="breadcrumb-segment">${folderName}</a>
+                    </span>
+                    <svg width="24" height="24" viewBox="0 0 24 24" class="mc-icon-template-stateless" style="top: 4px; position: relative;">
+                        <title>arrow-right</title>
+                        <path d="M10.414 7.05l4.95 4.95-4.95 4.95L9 15.534 12.536 12 9 8.464z" fill="#637282"
+                            fill-rule="evenodd"></path>
+                    </svg>
+                `;
+            }
+            navFilePath.appendChild(span);
+        }
+
+        this.linkFolderPath.innerHTML = navFilePath.innerHTML;
+
+        this.linkFolderPath.querySelectorAll('a').forEach(tag_a =>{
+            tag_a.addEventListener('click', event =>{
+                event.preventDefault(); // não insira o '#' no caminho
+                // a pasta atual agora é o caminho da tag_a
+                
+                this.currentFolder = tag_a.dataset.path.split('/');
+                console.log(this.currentFolder);
+                // agora abra a pasta atual
+                this.openFolder();
+            });
+        });
+
+    }
 
     addCssClassToElement(element, cssClass){
         return element.classList.add(cssClass);
