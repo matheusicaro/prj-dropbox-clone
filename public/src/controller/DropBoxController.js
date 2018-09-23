@@ -60,6 +60,24 @@ class DropBoxController {
 
     initEvents(){
 
+        // event para quando for clicado em deletar arquivos
+        this.btnDeleteEl.addEventListener('click', e =>{
+
+            this.deleteFileDataBase().then(responses => {
+                
+                responses.forEach( response =>{
+                    let fileKey = response.fields.key;
+                    if(fileKey){
+                        this.getDatabaseReference().child(fileKey).remove();
+                    }
+                })
+
+            }).catch(err =>{
+                console.log(err);
+            })
+        })
+
+
         // evento quando clicar no botão 'rename'
         this.btnRenameEl.addEventListener('click', event =>{
 
@@ -127,6 +145,28 @@ class DropBoxController {
         })
     }
 
+    deleteFileDataBase(){
+
+        let promises = [];
+        this.getSelectedFiles().forEach(element => {
+
+            let file = JSON.parse(element.dataset.file);
+            let key = element.dataset.key;
+            let formData = new FormData();
+
+            formData.append('path', file.path);
+            formData.append('key', key);
+            // PARA CADA PROMESSA DE UM ARQUIVO, REALIZE UM DELETE NO SERVIDOR.
+            promises.push(
+                    this.ajax( '/file', 'DELETE', formData, 
+                        () =>{ this.updateProgressUpload(event, file) }, 
+                        () =>{ this.startUploadTime = Date.now() }
+                    )
+            );
+        })
+        return Promise.all(promises);
+    }
+
     getSelectedFiles(){
         return this.listFilesEl.querySelectorAll('.selected')
     }
@@ -141,45 +181,58 @@ class DropBoxController {
         this.snackModalEl.style.display = (show) ? 'block' : 'none';
     }
 
+
+    ajax( url, method='GET', formData=new FormData(), onprogress=function(){}, onloadstart=function(){} ){
+
+        return new Promise((resolve, reject) =>{
+
+            let ajax = new XMLHttpRequest();
+            ajax.open(method, url);
+
+            ajax.onload = event => {
+                try{
+                    resolve(JSON.parse(ajax.responseText));
+                }catch (e){
+                    reject(e);
+                }
+            }
+
+            ajax.onerror = event =>{
+                reject(event);
+            }
+            
+            ajax.upload.onprogress = onprogress;
+            onloadstart();
+
+            this.startUploadTime = Date.now();
+            ajax.send(formData);
+        });
+    }
+
+
+
     sendUploadFile(files){
 
         let promises = [];
         // [...files] = files é uma coleção, logo estamos criando 
         // um array do tamanho da coleção que pode ser imensa
         [...files].forEach( file =>{
+           
+           
+           
+            let formData = new FormData();
+            // passando o arquivo no formData, ('nome do campo no post', arquivo)
+            formData.append('input-file', file);
+           
             // criando uma promise para efetuar o post de cada arquivo
-            promises.push(new Promise((resolve, reject) =>{
-                
-                let ajax = new XMLHttpRequest();
-                ajax.open('POST', '/upload');
-
-                ajax.onload = event => {
-
-                    try{
-                        resolve(JSON.parse(ajax.responseText));
-                    }catch (e){
-                        reject(e);
-                    }
-                }
-
-                ajax.onerror = event =>{
-                    reject(event);
-                }
-                
-                ajax.upload.onprogress = event =>{
-                    this.updateProgressUpload(event, file);
-                }
-
-                let formData = new FormData();
-                // passando o arquivo no formData, ('nome do campo no post', arquivo)
-                formData.append('input-file', file);
-
-                this.startUploadTime = Date.now();
-
-                ajax.send(formData);
-            }));
+            promises.push(
+                this.ajax( '/upload', 'POST', formData, 
+                    () =>{ this.updateProgressUpload(event, file) }, 
+                    () =>{ this.startUploadTime = Date.now() }
+                )
+            )
         });
-        // retorne um array de promessas a serem execultadas, promise.all gerencia todas elas.
+
         return Promise.all(promises);
     }
 
