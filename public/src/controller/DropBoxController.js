@@ -18,7 +18,7 @@ class DropBoxController {
         this.iconsType = new Icons();
 
         this.onSelectionChange = new Event('selectionChange');
-
+        this.urlFile = [];
         this.currentFolder = ['Meu DropBox']
         this.linkFolderPath = document.querySelector('#browse-location');
 
@@ -117,7 +117,6 @@ class DropBoxController {
                 file.name = newName;
                 let key = firstFileSelected.dataset.key;
                 // no banco, procure um filho(child) da referencia do banco, e substitua o arquivo.
-                console.log(file)
                 this.getDatabaseReference().child(key).set(file);
             }
         })
@@ -158,8 +157,25 @@ class DropBoxController {
             this.btnSendFileEl.disabled = true;
 
             this.sendUploadFile(event.target.files).then(responses =>{
-                responses.forEach(response =>{
-                    this.getDatabaseReference().push().set(response.files['input-file']);
+               
+               // após upload dos arquivos, grave as informações como referencia no Firebase
+               responses.forEach(response =>{
+
+                    let url; 
+                    this.urlFile.forEach((element) =>{
+                        if(element.name === response.name){
+                           url = element.url;
+                        }
+                    })
+
+                    let index =this.urlFile.indexOf(response.name);
+                    console.log(response.name, " : ", url)
+                    this.getDatabaseReference().push().set({
+                        name: response.name,
+                        type: response.contentType,
+                        path: url,
+                        size: response.size
+                    });
                 })
                 this.uploadComplete();
 
@@ -167,6 +183,7 @@ class DropBoxController {
                 this.uploadComplete();
                 console.log("error: ", err)
             })
+            this.urlFile = [];
             this.modalShow();
         })
     }
@@ -238,27 +255,46 @@ class DropBoxController {
 
 
     sendUploadFile(files){
-
+        this.urlFile = [];
         let promises = [];
         // [...files] = files é uma coleção, logo estamos criando 
         // um array do tamanho da coleção que pode ser imensa
         [...files].forEach( file =>{
-           
-           
-           
-            let formData = new FormData();
-            // passando o arquivo no formData, ('nome do campo no post', arquivo)
-            formData.append('input-file', file);
-           
-            // criando uma promise para efetuar o post de cada arquivo
-            promises.push(
-                this.ajax( '/upload', 'POST', formData, 
-                    () =>{ this.updateProgressUpload(event, file) }, 
-                    () =>{ this.startUploadTime = Date.now() }
-                )
-            )
-        });
+           let url = "";
+            promises.push(new Promise((resolve, reject) =>{
+                // referencia do arquivo no storage que recebe o caminho do file e o chiled que é para criar no banco. getDonwloadURL() retorna url do arquivo
+                let fileRef = firebase.storage().ref(this.currentFolder.join('/')).child(file.name);
+                // uploadTask  é uma referencia que consegue manipular o donwload do arquivo, como eventos de bits no download
+                let uploadTask  = fileRef.put(file);
+                uploadTask .on('state_changed', uploadProgress =>{
 
+                    this.updateProgressUpload({
+                        loaded: uploadProgress.bytesTransferred,
+                        total: uploadProgress.totalBytes
+                    }, file);
+
+                }, error =>{
+                    console.log(error);
+                    resolve();
+                
+                }, () =>{   // apóes o upload ser realizado, é retornado uma promise com as informacoes do file
+                    fileRef.getMetadata().then(metadata =>{
+                        resolve(metadata);
+
+                    }).catch(err =>{
+                        reject(err)
+                    })
+                });
+                // necessario vincular um MAP entre 'nome' e 'url' do arquivo por causa da referencia do Storage
+                fileRef.getDownloadURL().then(url => { 
+                    let object = new Object();
+                    object.name = file.name;
+                    object.url = url;
+                    this.urlFile.push(object) 
+                });
+
+            }));
+        });
         return Promise.all(promises);
     }
 
