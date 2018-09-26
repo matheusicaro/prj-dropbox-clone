@@ -199,18 +199,93 @@ class DropBoxController {
             // PARA CADA PROMESSA DE UM ARQUIVO, REALIZE UM DELETE NO SERVIDOR.
             promises.push( new Promise ((resolve,reject) =>{
                 
-                let fileReference = firebase.storage().ref(this.currentFolder.join('/')).child(file.name);
-                // delete o arquivo e retorne a o campo com a key do objeto removido, se não ocorrer, rejeita o erro.
-                fileReference.delete().then(() =>{
-                    resolve({ fields: { key: key }})
+                // SE for uma pasta apague-a, SE N SE for um arquivo, apague.
+                if (file.type === 'folder'){
+
+                    let reference = this.currentFolder.join('/');
+                    // delete a pasta e retorne a o campo com a key do objeto removido.
+                    this.removeFolder(reference, file.name).then(() =>{
+                        
+                        resolve({ fields: { key: key }})
+                    
+                    })
                 
-                }).catch(err =>{
-                    reject(err);
-                })
+                }else if (file.type){
+                    
+                    let reference = this.currentFolder.join('/');
+                    // delete o arquivo e retorne a o campo com a key do objeto removido, se não ocorrer, rejeita o erro.
+                    this.removeFileStorage(reference, file.name).then(() =>{
+                        
+                        resolve({ fields: { key: key }})
+                    
+                    })
+                }
+
             }));
         })
+
         return Promise.all(promises);
     }
+
+    removeFolder(reference, name){
+
+        return new Promise( (resolve, reject) =>{
+
+            // pegue a referencia da pasta, o caminho
+            let folderReference = this.getDatabaseReference(reference + '/' + name);
+            // acesse a pasta e escute os eventos, no primeiro evento que foi encontrado, me retorne 'files'
+            folderReference.on('value', files =>{
+
+                console.log(folderReference)
+                // pare de ouvir eventos da pasta atual
+                folderReference.off('value');
+
+                // Para cada item na pasta, percorra, se encontrar arquivo apague, se encontrar pasta, entre e percorrar.
+                files.forEach(item =>{
+
+                    let file = item.val();
+                    file.key = item.key;
+                    console.log("file :", file)
+
+                    if(file.type === 'folder'){
+                        
+                        let ref = (reference + '/' + name); 
+                        
+                        this.removeFolder(ref, file.name).then( ()=> { 
+                            resolve({ 
+                                filds: { key: file.key }
+                            })
+                        }).catch(err =>{
+                            reject(err)
+                        })
+
+                    }else if (data.type){
+
+                        let ref = (reference + '/' + name);
+                        this.removeFileStorage(ref, file.name).then( ()=> { 
+                            resolve({ 
+                                filds: { key: file.key }
+                            })
+                        }).catch(err =>{
+                            reject(err)
+                        })
+                    }
+                })
+
+                // apague a pasta atual
+                folderReference.remove();
+
+            })
+        });
+
+    }
+
+    removeFileStorage(reference, name){
+
+        let fileReference = firebase.storage().ref(reference).child(name);
+        return fileReference.delete();
+    }
+
 
     getSelectedFiles(){
         return this.listFilesEl.querySelectorAll('.selected')
