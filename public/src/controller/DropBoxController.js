@@ -195,17 +195,19 @@ class DropBoxController {
 
             let file = JSON.parse(element.dataset.file);
             let key = element.dataset.key;
-            let formData = new FormData();
-
-            formData.append('path', file.path);
-            formData.append('key', key);
+          
             // PARA CADA PROMESSA DE UM ARQUIVO, REALIZE UM DELETE NO SERVIDOR.
-            promises.push(
-                    this.ajax( '/file', 'DELETE', formData, 
-                        () =>{ this.updateProgressUpload(event, file) }, 
-                        () =>{ this.startUploadTime = Date.now() }
-                    )
-            );
+            promises.push( new Promise ((resolve,reject) =>{
+                
+                let fileReference = firebase.storage().ref(this.currentFolder.join('/')).child(file.name);
+                // delete o arquivo e retorne a o campo com a key do objeto removido, se não ocorrer, rejeita o erro.
+                fileReference.delete().then(() =>{
+                    resolve({ fields: { key: key }})
+                
+                }).catch(err =>{
+                    reject(err);
+                })
+            }));
         })
         return Promise.all(promises);
     }
